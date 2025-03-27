@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Simple Chat App</title>
+    <style>
+        body { font-family: Arial, sans-serif; text-align: center; background: #f4f4f4; }
+        .container { width: 400px; margin: auto; background: white; padding: 20px; border-radius: 5px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+        #chatHistory { height: 300px; overflow-y: auto; border: 1px solid #ddd; padding: 10px; margin-bottom: 10px; background: #fff; }
+        .chat-message { border-bottom: 1px solid #ddd; padding: 5px; }
+        input, button { padding: 10px; margin: 5px; }
+        button { background: #007bff; color: white; border: none; cursor: pointer; }
+        button:hover { background: #0056b3; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Simple Chat</h1>
+        <div id="chatHistory"></div>
+        <input id="senderInput" type="text" placeholder="Your name" required>
+        <input id="messageInput" type="text" placeholder="Your message" required>
+        <button onclick="sendMessage()">Send</button>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/sockjs-client/1.6.1/sockjs.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
+    <script>
+        var stompClient = null;
+
+        function connect() {
+            var socket = new SockJS('/ws');
+            stompClient = Stomp.over(socket);
+
+            stompClient.connect({}, function () {
+                stompClient.subscribe('/topic/messages', function (response) {
+                    showMessage(JSON.parse(response.body));
+                });
+            });
+        }
+
+        function sendMessage() {
+            var sender = document.getElementById('senderInput').value.trim();
+            var message = document.getElementById('messageInput').value.trim();
+            if (sender === '' || message === '') return;
+
+            var chatMessage = { sender: sender, content: message };
+            stompClient.send("/app/chat", {}, JSON.stringify(chatMessage));
+            document.getElementById('messageInput').value = '';
+        }
+
+        function showMessage(message) {
+            var chatHistory = document.getElementById('chatHistory');
+            var messageElement = document.createElement('div');
+            messageElement.classList.add("chat-message");
+            messageElement.textContent = `${message.sender}: ${message.content}`;
+            chatHistory.appendChild(messageElement);
+            chatHistory.scrollTop = chatHistory.scrollHeight;
+        }
+
+        window.onload = connect;
+    </script>
+</body>
+</html>
